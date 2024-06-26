@@ -1,16 +1,14 @@
-
-
+import 'dart:convert';
 
 import 'package:custom_clippers/custom_clippers.dart';
 
 import 'package:flutter/material.dart';
 import 'package:salon/pages_usermanagement/forget_otp_page.dart';
-
-
-
-
-
+import 'package:salon/pages_usermanagement/otp_verification.dart';
+import 'package:salon/utils/api.dart';
+import 'package:dio/dio.dart';
 import 'package:salon/utils/colors.dart';
+import 'package:salon/utils/shared_prefrences_helper.dart';
 
 class ForgetPasswordPage extends StatefulWidget {
   const ForgetPasswordPage({super.key});
@@ -24,8 +22,6 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
 
   final TextEditingController _nameController = TextEditingController();
 
-  
-
   String? validateEmail(String? email) {
     RegExp emailRegex = RegExp(r'^[\w\.-]+@[\w-]+\.\w{2,3}(\.\w{2,3})?$');
     final isEmailValid = emailRegex.hasMatch(email ?? '');
@@ -36,10 +32,11 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
     return null;
   }
 
-  TextEditingController confirmpass = TextEditingController();
-  bool obsecuretxt = true;
-  bool confrimobsecuretxt = true;
-  bool isChecked = false;
+  // TextEditingController confirmpass = TextEditingController();
+  // bool obsecuretxt = true;
+  // bool confrimobsecuretxt = true;
+  bool isLoading = false;
+
   @override
   Widget build(BuildContext context) {
     final inputBorder = OutlineInputBorder(
@@ -85,7 +82,7 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                   ),
                 ),
               ),
-               const SizedBox(
+              const SizedBox(
                 height: 12,
               ),
               const Padding(
@@ -112,15 +109,11 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        
-                       
                         TextFormField(
                           controller: _nameController,
                           decoration: InputDecoration(
-                             errorBorder:const OutlineInputBorder(
-                                    
-                                      borderSide:
-                                          BorderSide(color: Colors.white)),
+                            errorBorder: const OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white)),
                             contentPadding: const EdgeInsets.symmetric(
                                 vertical: 16, horizontal: 16),
                             hintText: 'Enter email id',
@@ -134,41 +127,41 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
                           keyboardType: TextInputType.emailAddress,
                           validator: validateEmail,
                         ),
-                    
-                        
                         const SizedBox(height: 25),
                         InkWell(
                           onTap: () {
                             if (_formkey.currentState!.validate()) {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const ForegetOTPPage(),
-                                ),
-                              );
+                              forgetPassAPI(_nameController.text);
+                              // Navigator.pushReplacement(
+                              //   context,
+                              //   MaterialPageRoute(
+                              //     builder: (context) => const ForegetOTPPage(),
+                              //   ),
+                              // );
                             }
                           },
-                          child: Container(
-                            // // padding: const EdgeInsets.all(32),
-                            // margin: const EdgeInsets.symmetric(horizontal: 30),
-                            height: 50,
-                            width: double.infinity,
-                            decoration: const BoxDecoration(
-                                color: Colors.white,
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(5))),
-                            child: const Center(
-                                child: Text(
-                              'SEND CODE',
-                              style: TextStyle(
-                                  color:  Color.fromARGB(255, 0, 11, 70),
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600),
-                            )),
-                          ),
+                          child: !isLoading
+                              ? Container(
+                                  // // padding: const EdgeInsets.all(32),
+                                  // margin: const EdgeInsets.symmetric(horizontal: 30),
+                                  height: 50,
+                                  width: double.infinity,
+                                  decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius:
+                                          BorderRadius.all(Radius.circular(5))),
+                                  child: const Center(
+                                    child: Text(
+                                      'SEND CODE',
+                                      style: TextStyle(
+                                          color: Color.fromARGB(255, 0, 11, 70),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                )
+                              : CircularProgressIndicator(),
                         ),
-                        
                       ],
                     ),
                   ),
@@ -179,5 +172,61 @@ class _ForgetPasswordPageState extends State<ForgetPasswordPage> {
         ),
       ),
     );
+  }
+
+  Future<dynamic> forgetPassAPI(String email) async {
+    setState(() {
+      isLoading = true; // Add this line
+    });
+    print('forgetPassAPI Function Called');
+    print("$email");
+    final String apiUrl = APIEndPoints.forgetPass;
+    var dio = Dio();
+    try {
+      var map = Map<String, dynamic>();
+      map['email'] = email;
+
+      FormData formData = new FormData.fromMap(map);
+      var res = await dio.post(apiUrl, data: formData);
+      print("object : ${res.data}");
+      // var res = await http.post(
+      //   Uri.parse(apiUrl),
+      //   body: map,
+      // );
+      // print("Data sent");
+      if (res.statusCode == 200) {
+        print(res.statusCode);
+        await SharedPrefs.saveEmail(email);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ForegetOTPPage(),
+          ),
+        );
+        print('Success: ${res.data}');
+      } else if (res.statusCode == 400) {
+        print('Client Error: ${res.statusMessage}');
+      } else {
+        print('Server Error: ${res.statusCode}');
+      }
+      // if (jsonDecode(res.data)['status'] == 'success') {
+      //   await SharedPrefs.saveEmail(email);
+      //   Navigator.pushReplacement(
+      //     context,
+      //     MaterialPageRoute(
+      //       builder: (context) => const AskMobileNumberPage(),
+      //     ),
+      //   );
+      // }
+      return res;
+    } catch (e, stackTrace) {
+      print('Error: $e');
+      print('StackTrace: $stackTrace');
+      return null;
+    } finally {
+      setState(() {
+        isLoading = false; // Add this line
+      });
+    }
   }
 }

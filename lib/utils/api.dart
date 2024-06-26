@@ -4,4 +4,6 @@ class APIEndPoints{
   static String verifyOTP="https://ontimesalon.com/api/otp_verify.php";
   static String saloonList="https://ontimesalon.com/api/Salon_list.php";
   static String searchSaloon="https://ontimesalon.com/api/Search_Salon.php";
+  static String forgetPass = "https://ontimesalon.com/api/Forgot_Password.php";
+  static String forgetPassOTP = "";
 }
